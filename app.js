@@ -215,9 +215,7 @@
     if (!currentExam) return;
     document.getElementById('stat-score').textContent = `${currentExam.totalScore} / ${currentExam.maxScore}`;
     document.getElementById('stat-percentage').textContent = `${currentExam.percentage}%`;
-    document.getElementById('stat-deviation').textContent =
-      currentExam.deviation != null ? currentExam.deviation : 'N/A';
-    document.getElementById('stat-grade').textContent = currentExam.grade || 'N/A';
+    // 偏差値・判定は下でまとめて処理（passLine / percentile も活用するため）
 
     let totalCorrect = 0, totalIncorrect = 0;
     Object.values(currentExam.subjects || {}).forEach(s => {
@@ -226,6 +224,25 @@
     });
     document.getElementById('stat-correct').textContent = `${totalCorrect}問`;
     document.getElementById('stat-incorrect').textContent = `${totalIncorrect}問`;
+
+    // 判定: grade があればそれ、なければ模試の上位% を表示
+    const gradeEl = document.getElementById('stat-grade');
+    if (currentExam.grade) {
+      gradeEl.textContent = currentExam.grade;
+      gradeEl.title = '';
+    } else if (currentExam.percentile != null) {
+      gradeEl.textContent = `上位${currentExam.percentile}%`;
+      gradeEl.title = '';
+    } else {
+      gradeEl.textContent = 'N/A';
+    }
+
+    // 偏差値: ホバーで合格ラインを表示
+    const devEl = document.getElementById('stat-deviation');
+    devEl.textContent = currentExam.deviation != null ? currentExam.deviation : 'N/A';
+    devEl.title = currentExam.passLine != null
+      ? `5年平均合格ライン: ${currentExam.passLine}`
+      : '';
   }
 
   // ===== スコア推移 =====
@@ -362,7 +379,7 @@
 
   function subjectBarChart(entries) {
     if (entries.length === 0) return '<p class="chart-note">データなし</p>';
-    const barH = 20, gap = 7, pL = 155, pR = 80, pT = 8, pB = 8;
+    const barH = 20, gap = 7, pL = 155, pR = 160, pT = 8, pB = 8;
     const totalW = 800;
     const cW = totalW - pL - pR;
     const totalH = entries.length * (barH + gap) + pT + pB;
@@ -379,7 +396,7 @@
         <text x="${pL - 8}" y="${y + barH / 2 + 4}" text-anchor="end" font-size="12" fill="#444">${label}</text>
         <rect x="${pL}" y="${y}" width="${cW}" height="${barH}" fill="#f0f0f0" rx="3"/>
         <rect x="${pL}" y="${y}" width="${fillW}" height="${barH}" fill="${barColor}" rx="3" opacity="0.85"/>
-        <text x="${pL + cW + 6}" y="${y + barH / 2 + 4}" font-size="11" fill="#555">${rateStr}%</text>`;
+        <text x="${pL + cW + 6}" y="${y + barH / 2 + 4}" font-size="11" fill="#555">${rateStr}% (${s.correct}/${s.total}問)</text>`;
     }).join('');
 
     return `<svg viewBox="0 0 ${totalW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">${bars}</svg>`;
