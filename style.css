@@ -211,7 +211,7 @@ select {
 /* Overview cards */
 .cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
@@ -271,6 +271,11 @@ select {
 .rate-bar-wrap { height: 7px; background: #f0f0f0; border-radius: 4px; overflow: hidden; margin-top: 3px; }
 .rate-bar { height: 100%; border-radius: 4px; }
 
+/* Sort */
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { background: #f0e0e0; }
+th.sort-active { color: #8b0000; }
+
 .col-correct { color: #2e7d32; font-weight: 600; }
 .col-partial { color: #e65100; }
 .col-incorrect { color: #c62828; font-weight: 600; }
@@ -287,6 +292,7 @@ select {
 @media (max-width: 540px) {
   header h1 { font-size: 0.95em; }
   .cards { grid-template-columns: repeat(2, 1fr); }
+  .card-value { font-size: 1.25em; }
   .setup-card { padding: 24px 18px; }
   .input-row { flex-direction: column; }
   .input-row input { width: 100%; }

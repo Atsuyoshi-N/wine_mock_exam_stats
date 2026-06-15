@@ -64,6 +64,28 @@
   let currentExam = null;
   let currentSubject = null;
   let currentGistId = null;
+  let subjectSortState = { col: 'rate', dir: 'asc' };
+  let currentSubjectEntries = [];
+
+  // ===== ソート =====
+
+  function sortSubjectEntries(entries) {
+    const { col, dir } = subjectSortState;
+    return [...entries].sort((a, b) => {
+      const sa = a[1], sb = b[1];
+      let va = 0, vb = 0;
+      switch (col) {
+        case 'rate':
+          va = sa.maxPoints > 0 ? sa.earnedPoints / sa.maxPoints : 0;
+          vb = sb.maxPoints > 0 ? sb.earnedPoints / sb.maxPoints : 0;
+          break;
+        case 'correct':   va = sa.correct;   vb = sb.correct;   break;
+        case 'incorrect': va = sa.incorrect; vb = sb.incorrect; break;
+        case 'total':     va = sa.total;     vb = sb.total;     break;
+      }
+      return dir === 'asc' ? va - vb : vb - va;
+    });
+  }
 
   // ===== Gist ID 管理 =====
 
@@ -156,7 +178,6 @@
       document.getElementById('dashboard-content').style.display = 'none';
       return;
     }
-
     document.getElementById('no-data').style.display = 'none';
     document.getElementById('dashboard-content').style.display = 'block';
 
@@ -197,6 +218,14 @@
     document.getElementById('stat-deviation').textContent =
       currentExam.deviation != null ? currentExam.deviation : 'N/A';
     document.getElementById('stat-grade').textContent = currentExam.grade || 'N/A';
+
+    let totalCorrect = 0, totalIncorrect = 0;
+    Object.values(currentExam.subjects || {}).forEach(s => {
+      totalCorrect += s.correct;
+      totalIncorrect += s.incorrect;
+    });
+    document.getElementById('stat-correct').textContent = `${totalCorrect}問`;
+    document.getElementById('stat-incorrect').textContent = `${totalIncorrect}問`;
   }
 
   // ===== スコア推移 =====
@@ -220,13 +249,33 @@
   function renderSubjectBreakdown() {
     if (!currentExam) return;
     const subjects = currentExam.subjects || {};
-    const entries = Object.entries(subjects).sort((a, b) => {
+    currentSubjectEntries = Object.entries(subjects);
+
+    // 棒グラフは常に得点率昇順（苦手順）で固定
+    const byRate = [...currentSubjectEntries].sort((a, b) => {
       const ra = a[1].maxPoints > 0 ? a[1].earnedPoints / a[1].maxPoints : 0;
       const rb = b[1].maxPoints > 0 ? b[1].earnedPoints / b[1].maxPoints : 0;
       return ra - rb;
     });
-    document.getElementById('subject-bar-chart').innerHTML = subjectBarChart(entries);
-    document.getElementById('subject-table-wrap').innerHTML = subjectTable(entries);
+    document.getElementById('subject-bar-chart').innerHTML = subjectBarChart(byRate);
+    document.getElementById('subject-table-wrap').innerHTML = subjectTable(currentSubjectEntries);
+    attachSortHandlers();
+  }
+
+  function attachSortHandlers() {
+    document.querySelectorAll('#subject-data-table th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.sort;
+        if (subjectSortState.col === col) {
+          subjectSortState.dir = subjectSortState.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          subjectSortState.col = col;
+          subjectSortState.dir = 'asc';
+        }
+        document.getElementById('subject-table-wrap').innerHTML = subjectTable(currentSubjectEntries);
+        attachSortHandlers();
+      });
+    });
   }
 
   // ===== 分野別推移 =====
@@ -336,10 +385,18 @@
     return `<svg viewBox="0 0 ${totalW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">${bars}</svg>`;
   }
 
-  // ===== 分野別テーブル =====
+  // ===== 分野別テーブル（ソート対応） =====
 
-  function subjectTable(entries) {
-    if (entries.length === 0) return '';
+  function subjectTable(rawEntries) {
+    if (rawEntries.length === 0) return '';
+    const entries = sortSubjectEntries(rawEntries);
+
+    function sortTh(key, label) {
+      const active = subjectSortState.col === key;
+      const icon = active ? (subjectSortState.dir === 'asc' ? ' ▲' : ' ▼') : '';
+      return `<th class="sortable${active ? ' sort-active' : ''}" data-sort="${key}">${label}${icon}</th>`;
+    }
+
     const rows = entries.map(([key, s]) => {
       const rate = s.maxPoints > 0 ? Math.round(s.earnedPoints / s.maxPoints * 1000) / 10 : 0;
       const rateClass = rate >= 70 ? 'rate-good' : rate >= 50 ? 'rate-mid' : 'rate-bad';
@@ -357,9 +414,14 @@
       </tr>`;
     }).join('');
 
-    return `<table class="subject-table">
+    return `<table class="subject-table" id="subject-data-table">
       <thead><tr>
-        <th>分野</th><th>出題</th><th>正解</th><th>部分点</th><th>不正解</th><th class="rate-bar-cell">得点率</th>
+        <th>分野</th>
+        ${sortTh('total', '出題')}
+        ${sortTh('correct', '正解')}
+        <th>部分点</th>
+        ${sortTh('incorrect', '不正解')}
+        ${sortTh('rate', '得点率')}
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -375,7 +437,6 @@
   // ===== イベントリスナー =====
 
   function bindEvents() {
-    // Gist 入力フォーム
     document.getElementById('gist-load-btn').addEventListener('click', () => {
       const id = document.getElementById('gist-id-input').value.trim();
       if (!id) return;
@@ -391,33 +452,28 @@
       if (e.key === 'Enter') document.getElementById('gist-load-btn').click();
     });
 
-    // 試験選択
     document.getElementById('exam-select').addEventListener('change', e => {
       currentExam = history.find(ex => ex.id === e.target.value) || history[0];
       renderOverview();
-      renderSubjectBreakdown();
       renderScoreTrend();
+      renderSubjectBreakdown();
     });
 
-    // 分野選択
     document.getElementById('subject-select').addEventListener('change', e => {
       currentSubject = e.target.value;
       renderSubjectTrend();
     });
 
-    // 更新ボタン
     document.getElementById('refresh-btn').addEventListener('click', () => {
       if (currentGistId) loadAndRender(currentGistId);
     });
 
-    // 別のGistを使うボタン
     document.getElementById('change-gist-btn').addEventListener('click', () => {
       clearGistId();
       document.getElementById('gist-id-input').value = '';
       showSetup();
     });
 
-    // エラー画面の再試行ボタン
     document.getElementById('retry-btn').addEventListener('click', () => {
       if (currentGistId) loadAndRender(currentGistId);
       else showSetup();
