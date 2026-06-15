@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ワイン受験.com 成績ダッシュボード</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>📊 模擬試験 成績ダッシュボード</h1>
+    <div class="header-actions">
+      <span id="last-updated" class="last-updated"></span>
+      <button id="refresh-btn" class="secondary-btn" style="display:none;">更新</button>
+      <button id="change-gist-btn" class="secondary-btn" style="display:none;">別のGistを使う</button>
+    </div>
+  </header>
+
+  <!-- Gist ID 入力画面 -->
+  <div id="gist-setup">
+    <div class="setup-card">
+      <h2>データソースを設定</h2>
+      <p>Chrome拡張の「GitHub同期設定」でデータを同期すると Gist ID が発行されます。<br>その ID をここに入力してください。</p>
+      <div class="input-row">
+        <input type="text" id="gist-id-input" placeholder="Gist ID（例: a1b2c3d4e5f6...）">
+        <button id="gist-load-btn" class="btn-primary">読み込む</button>
+      </div>
+      <p class="hint">一度入力すると次回からは自動で読み込まれます</p>
+      <div id="setup-error" class="error-msg" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ローディング -->
+  <div id="loading" style="display:none;">
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <p>データを読み込んでいます...</p>
+    </div>
+  </div>
+
+  <!-- エラー -->
+  <div id="error-state" style="display:none;">
+    <div class="error-card">
+      <p id="error-msg"></p>
+      <button id="retry-btn" class="btn-primary" style="margin-top:12px;">再試行</button>
+    </div>
+  </div>
+
+  <!-- ダッシュボード本体 -->
+  <main id="dashboard-main" style="display:none;">
+    <div id="no-data" class="no-data" style="display:none;">
+      <p>試験データがありません</p>
+    </div>
+
+    <div id="dashboard-content" style="display:none;">
+      <!-- 試験選択 -->
+      <div class="section">
+        <div class="section-title">試験を選択</div>
+        <div class="selector-row">
+          <label for="exam-select">試験日:</label>
+          <select id="exam-select"></select>
+        </div>
+      </div>
+
+      <!-- 概要カード -->
+      <div class="section">
+        <div class="section-title">概要</div>
+        <div class="cards">
+          <div class="card">
+            <div class="card-label">得点</div>
+            <div class="card-value" id="stat-score">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">正答率</div>
+            <div class="card-value" id="stat-percentage">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">偏差値</div>
+            <div class="card-value" id="stat-deviation">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">判定</div>
+            <div class="card-value" id="stat-grade">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- スコア推移 -->
+      <div class="section">
+        <div class="section-title">スコア推移（全試験）</div>
+        <div class="chart-wrap" id="score-trend-chart"></div>
+      </div>
+
+      <!-- 分野別成績 -->
+      <div class="section">
+        <div class="section-title">分野別成績（選択中の試験）</div>
+        <div class="chart-wrap" id="subject-bar-chart"></div>
+        <div id="subject-table-wrap"></div>
+      </div>
+
+      <!-- 分野別推移 -->
+      <div class="section">
+        <div class="section-title">分野別推移</div>
+        <div class="subject-selector-row">
+          <label for="subject-select">分野:</label>
+          <select id="subject-select"></select>
+        </div>
+        <div class="chart-wrap" id="subject-trend-chart"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
