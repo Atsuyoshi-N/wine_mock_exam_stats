@@ -247,13 +247,24 @@
 
   // ===== スコア推移 =====
 
+  function getExamCategory(ex) {
+    return ex.examCategory || (ex.examType === 'exam' ? 'exams' : null);
+  }
+
   function renderScoreTrend() {
     const el = document.getElementById('score-trend-chart');
-    if (history.length < 2) {
+    const titleEl = document.getElementById('score-trend-title');
+
+    const currentCat = getExamCategory(currentExam);
+    const filtered = history.filter(ex => getExamCategory(ex) === currentCat);
+    const typeLabel = currentExam?.examType === 'exam' ? '模試' : '問題集';
+    if (titleEl) titleEl.textContent = `スコア推移（${typeLabel}）`;
+
+    if (filtered.length < 2) {
       el.innerHTML = '<p class="chart-note">推移グラフは2回以上の試験データが必要です</p>';
       return;
     }
-    const data = history.map(ex => ({
+    const data = filtered.map(ex => ({
       label: fmtDate(ex.date),
       value: ex.percentage,
       highlight: ex.id === currentExam?.id,
